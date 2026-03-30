@@ -1,3 +1,22 @@
-export default function TextNode() {
-  return <div>Text Node</div>
+"use client"
+
+import { Handle, Position } from "reactflow"
+
+export default function ExtractFrameNode() {
+  return (
+    <div className="bg-blue-50 border rounded shadow p-3 w-48">
+
+      <div className="font-semibold text-sm mb-2">
+        Extract Frame
+      </div>
+
+      <p className="text-xs text-gray-500">
+        Extract frame from video
+      </p>
+
+      <Handle type="target" position={Position.Left} />
+      <Handle type="source" position={Position.Right} />
+
+    </div>
+  )
 }

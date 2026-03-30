@@ -18,6 +18,10 @@ import "reactflow/dist/style.css"
 // custom nodes
 import TextNode from "@/components/nodes/TextNode"
 import LLMNode from "@/components/nodes/LLMNode"
+import ImageUploadNode from "../nodes/ImageUploadNode"
+import VideoUploadNode from "../nodes/VideoUploadNode"
+import CropImageNode from "../nodes/CropImageNode"
+import ExtractFrameNode from "../nodes/ExtractFrameNode"
 
 let id = 0
 const getId = () => `node_${id++}`
@@ -25,7 +29,12 @@ const getId = () => `node_${id++}`
 // node mapping
 const nodeTypes = {
   textNode: TextNode,
-  llmNode: LLMNode
+  llmNode: LLMNode,
+  imageUpload: ImageUploadNode,
+   videoUpload: VideoUploadNode,
+  cropImage: CropImageNode,
+  extractFrame: ExtractFrameNode
+
 }
 
 export default function FlowCanvas() {
