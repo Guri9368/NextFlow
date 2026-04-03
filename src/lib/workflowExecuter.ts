@@ -104,8 +104,13 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
         outputData = firstInput || null
          }
 
+         if (node?.data?.nodeType === "extractFrame") {
+        const firstInput = Object.values(inputData)[0]
+        outputData = firstInput || null
+          }
 
-         
+
+
         results[nodeId] = {
           status: "success",
           output: outputData
