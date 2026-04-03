@@ -108,7 +108,15 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
         const firstInput = Object.values(inputData)[0]
         outputData = firstInput || null
           }
+          
 
+          if (node?.data?.nodeType === "llmNode") {
+
+         const textInputs = Object.values(inputData).join(" ")
+
+          outputData = `AI Response based on: ${textInputs}`
+
+         }
 
 
         results[nodeId] = {

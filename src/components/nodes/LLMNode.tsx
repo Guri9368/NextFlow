@@ -2,7 +2,7 @@
 
 import { Handle, Position } from "reactflow"
 
-export default function LLMNode(){
+export default function LLMNode() {
   return (
     <div className="bg-purple-50 border rounded shadow p-3 w-48">
 
@@ -11,7 +11,7 @@ export default function LLMNode(){
       </div>
 
       <p className="text-xs text-gray-500">
-        Gemini Model
+        Gemini AI
       </p>
 
       <Handle type="target" position={Position.Left} />
