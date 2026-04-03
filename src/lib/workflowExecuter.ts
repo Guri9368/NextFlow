@@ -66,6 +66,8 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
 
         console.log("Executing node:", nodeId)
 
+        const node = nodes.find(n => n.id === nodeId)
+
         // Step 5 — Collect inputs from parent nodes
         const inputData: Record<string, any> = {}
 
@@ -83,12 +85,16 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
         // simulate execution
         await new Promise((resolve) => setTimeout(resolve, 500))
 
+        let outputData: any = "node executed"
+
+        // Text Node logic
+        if (node?.data?.nodeType === "textNode") {
+          outputData = node.data.text || ""
+        }
+
         results[nodeId] = {
           status: "success",
-          output: {
-            message: "node executed",
-            inputs: inputData
-          }
+          output: outputData
         }
 
         // Step 6 — Unlock next nodes
