@@ -2,9 +2,9 @@ import { Node, Edge } from "reactflow"
 
 export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
 
-  const results: any = {}
+  const results: Record<string, any> = {}
 
-  // Step 1: Build dependency graph
+  // Step 1 — Build dependency graph
   const dependencies: Record<string, string[]> = {}
 
   for (const node of nodes) {
@@ -12,19 +12,37 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
   }
 
   for (const edge of edges) {
-    const source = edge.source
-    const target = edge.target
-
-    if (!dependencies[target]) {
-      dependencies[target] = []
-    }
-
+    const { source, target } = edge
     dependencies[target].push(source)
   }
 
-  console.log("Dependency Graph:", dependencies)
+  // Step 2 — Detect cycles (DAG validation)
+  const visited = new Set<string>()
+  const stack = new Set<string>()
 
-  // Step 2: Find nodes with no dependencies
+  const hasCycle = (nodeId: string): boolean => {
+
+    if (stack.has(nodeId)) return true
+    if (visited.has(nodeId)) return false
+
+    visited.add(nodeId)
+    stack.add(nodeId)
+
+    for (const dep of dependencies[nodeId]) {
+      if (hasCycle(dep)) return true
+    }
+
+    stack.delete(nodeId)
+    return false
+  }
+
+  for (const node of nodes) {
+    if (hasCycle(node.id)) {
+      throw new Error("Workflow contains a circular dependency")
+    }
+  }
+
+  // Step 3 — Find initial executable nodes
   const readyNodes: string[] = []
 
   for (const nodeId in dependencies) {
@@ -35,37 +53,43 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
 
   console.log("Initial executable nodes:", readyNodes)
 
-  // Step 3: Execution loop (DAG executor)
+  // Step 4 — Execution loop (parallel batches)
 
   while (readyNodes.length > 0) {
 
-    const nodeId = readyNodes.shift()
+    const currentBatch = [...readyNodes]
+    readyNodes.length = 0
 
-    if (!nodeId) continue
+    console.log("Executing batch:", currentBatch)
 
-    console.log("Executing node:", nodeId)
+    await Promise.all(
+      currentBatch.map(async (nodeId) => {
 
-    // simulate execution
-    await new Promise((resolve) => setTimeout(resolve, 500))
+        console.log("Executing node:", nodeId)
 
-    results[nodeId] = {
-      status: "success",
-      output: "node executed"
-    }
+        // simulate node execution
+        await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // remove dependency from other nodes
-    for (const target in dependencies) {
+        results[nodeId] = {
+          status: "success",
+          output: "node executed"
+        }
 
-      dependencies[target] = dependencies[target].filter(
-        (dep) => dep !== nodeId
-      )
+        // remove dependency from other nodes
+        for (const target in dependencies) {
 
-      // if dependency cleared → node becomes executable
-      if (dependencies[target].length === 0 && !results[target]) {
-        readyNodes.push(target)
-      }
+          dependencies[target] = dependencies[target].filter(
+            (dep) => dep !== nodeId
+          )
 
-    }
+          if (dependencies[target].length === 0 && !results[target]) {
+            readyNodes.push(target)
+          }
+
+        }
+
+      })
+    )
 
   }
 

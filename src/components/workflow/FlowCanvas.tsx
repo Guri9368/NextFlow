@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useCallback } from "react"
+import { executeWorkflow } from "@/lib/workflowExecuter"
 
 import ReactFlow, {
   ReactFlowProvider,
@@ -77,7 +78,36 @@ function FlowCanvasInner() {
     [screenToFlowPosition, setNodes]
   )
 
+  const runWorkflow = async () => {
+
+  if(nodes.length === 0){
+    alert("Add some nodes first")
+    return
+  }
+
+  if(edges.length === 0){
+    alert("Connect nodes before running workflow")
+    return
+  }
+
+  console.log("Running workflow...")
+
+  const results = await executeWorkflow(nodes, edges)
+
+  console.log("Workflow result:", results)
+}
+
+
   return (
+  <div className="h-full relative">
+
+    <button
+      onClick={runWorkflow}
+      className="absolute top-4 right-4 z-10 px-3 py-1 bg-black text-white rounded"
+    >
+      Run Workflow
+    </button>
+
     <ReactFlow
       nodes={nodes}
       edges={edges}
@@ -93,7 +123,9 @@ function FlowCanvasInner() {
       <Controls />
       <MiniMap />
     </ReactFlow>
-  )
+
+  </div>
+)
 }
 
 export default function FlowCanvas() {
