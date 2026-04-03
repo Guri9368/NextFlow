@@ -24,7 +24,7 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
 
   console.log("Dependency Graph:", dependencies)
 
-  // Step 2: Find root nodes (no dependencies)
+  // Step 2: Find nodes with no dependencies
   const readyNodes: string[] = []
 
   for (const nodeId in dependencies) {
@@ -35,21 +35,39 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
 
   console.log("Initial executable nodes:", readyNodes)
 
+  // Step 3: Execution loop (DAG executor)
 
-  // Step 3: Execute ready nodes (simulate execution)
+  while (readyNodes.length > 0) {
 
-for (const nodeId of readyNodes) {
+    const nodeId = readyNodes.shift()
 
-  console.log("Executing root node:", nodeId)
+    if (!nodeId) continue
 
-  await new Promise((resolve) => setTimeout(resolve, 500))
+    console.log("Executing node:", nodeId)
 
-  results[nodeId] = {
-    status: "success",
-    output: "node executed"
+    // simulate execution
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    results[nodeId] = {
+      status: "success",
+      output: "node executed"
+    }
+
+    // remove dependency from other nodes
+    for (const target in dependencies) {
+
+      dependencies[target] = dependencies[target].filter(
+        (dep) => dep !== nodeId
+      )
+
+      // if dependency cleared → node becomes executable
+      if (dependencies[target].length === 0 && !results[target]) {
+        readyNodes.push(target)
+      }
+
+    }
+
   }
-
-}
 
   return results
 }
