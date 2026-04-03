@@ -53,8 +53,7 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
 
   console.log("Initial executable nodes:", readyNodes)
 
-  // Step 4 — Execution loop (parallel batches)
-
+  // Step 4 — Execution loop
   while (readyNodes.length > 0) {
 
     const currentBatch = [...readyNodes]
@@ -67,15 +66,32 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
 
         console.log("Executing node:", nodeId)
 
-        // simulate node execution
+        // Step 5 — Collect inputs from parent nodes
+        const inputData: Record<string, any> = {}
+
+        for (const edge of edges) {
+          if (edge.target === nodeId) {
+            const sourceResult = results[edge.source]
+            if (sourceResult) {
+              inputData[edge.source] = sourceResult.output
+            }
+          }
+        }
+
+        console.log("Node inputs:", inputData)
+
+        // simulate execution
         await new Promise((resolve) => setTimeout(resolve, 500))
 
         results[nodeId] = {
           status: "success",
-          output: "node executed"
+          output: {
+            message: "node executed",
+            inputs: inputData
+          }
         }
 
-        // remove dependency from other nodes
+        // Step 6 — Unlock next nodes
         for (const target in dependencies) {
 
           dependencies[target] = dependencies[target].filter(
