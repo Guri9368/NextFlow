@@ -86,15 +86,18 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
         await new Promise((resolve) => setTimeout(resolve, 500))
 
        let outputData: any = "node executed"
-
-        if (node?.data?.nodeType === "textNode") {
-        outputData = node.data.text || ""
-        }
+ 
+       if (node?.data?.nodeType === "textNode") {
+      outputData = node.data.text || ""
+      }
 
       if (node?.data?.nodeType === "imageUpload") {
-         outputData = node.data.image || null
-        }
+      outputData = node.data.image || null
+       }
 
+       if (node?.data?.nodeType === "videoUpload") {
+       outputData = node.data.video || null
+        }
         results[nodeId] = {
           status: "success",
           output: outputData
