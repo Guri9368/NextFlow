@@ -4,18 +4,25 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
 
   const results: any = {}
 
+ 
+  const dependencies: Record<string, string[]> = {}
+
   for (const node of nodes) {
-
-    console.log("Executing node:", node.id)
-
-    // simulate execution
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    results[node.id] = {
-      status: "success",
-      output: "node executed"
-    }
+    dependencies[node.id] = []
   }
+
+  for (const edge of edges) {
+    const source = edge.source
+    const target = edge.target
+
+    if (!dependencies[target]) {
+      dependencies[target] = []
+    }
+
+    dependencies[target].push(source)
+  }
+
+  console.log("Dependency Graph:", dependencies)
 
   return results
 }

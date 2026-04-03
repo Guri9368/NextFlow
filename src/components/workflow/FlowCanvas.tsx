@@ -10,7 +10,8 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   addEdge,
-  Connection
+  Connection,
+  useReactFlow
 } from "reactflow"
 
 import "reactflow/dist/style.css"
@@ -26,86 +27,81 @@ import ExtractFrameNode from "../nodes/ExtractFrameNode"
 let id = 0
 const getId = () => `node_${id++}`
 
-// node mapping
 const nodeTypes = {
   textNode: TextNode,
   llmNode: LLMNode,
   imageUpload: ImageUploadNode,
-   videoUpload: VideoUploadNode,
+  videoUpload: VideoUploadNode,
   cropImage: CropImageNode,
   extractFrame: ExtractFrameNode
-
 }
 
-export default function FlowCanvas() {
-
+function FlowCanvasInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
 
-  // connect nodes
+  const { screenToFlowPosition } = useReactFlow()
+
   const onConnect = useCallback(
     (connection: Connection) =>
       setEdges((eds) => addEdge(connection, eds)),
-    []
+    [setEdges]
   )
 
-  // allow drag
   const onDragOver = useCallback((event: any) => {
     event.preventDefault()
     event.dataTransfer.dropEffect = "move"
   }, [])
 
-  // drop node on canvas
   const onDrop = useCallback(
     (event: any) => {
       event.preventDefault()
 
       const type = event.dataTransfer.getData("application/reactflow")
-
       if (!type) return
 
-      const position = {
-        x: event.clientX - 250,
-        y: event.clientY - 100
-      }
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY
+      })
 
       const newNode = {
         id: getId(),
-        type: type,
+        type,
         position,
-        data: { label: `${type}` }
+        data: { label: type }
       }
 
       setNodes((nds) => nds.concat(newNode))
     },
-    [setNodes]
+    [screenToFlowPosition, setNodes]
   )
 
   return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      nodeTypes={nodeTypes}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      fitView
+    >
+      <Background gap={16} />
+      <Controls />
+      <MiniMap />
+    </ReactFlow>
+  )
+}
+
+export default function FlowCanvas() {
+  return (
     <div className="flex-1 h-full">
-
       <ReactFlowProvider>
-
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-          fitView
-        >
-
-          <Background gap={16} />
-          <Controls />
-          <MiniMap />
-
-        </ReactFlow>
-
+        <FlowCanvasInner />
       </ReactFlowProvider>
-
     </div>
   )
 }
