@@ -11,7 +11,7 @@ export default function CropImageNode() {
       </div>
 
       <p className="text-xs text-gray-500">
-        Configure crop parameters
+        Crops incoming image
       </p>
 
       <Handle type="target" position={Position.Left} />

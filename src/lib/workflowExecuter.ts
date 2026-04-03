@@ -98,6 +98,14 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
        if (node?.data?.nodeType === "videoUpload") {
        outputData = node.data.video || null
         }
+
+        if (node?.data?.nodeType === "cropImage") {
+        const firstInput = Object.values(inputData)[0]
+        outputData = firstInput || null
+         }
+
+
+         
         results[nodeId] = {
           status: "success",
           output: outputData
