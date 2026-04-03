@@ -35,5 +35,21 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
 
   console.log("Initial executable nodes:", readyNodes)
 
+
+  // Step 3: Execute ready nodes (simulate execution)
+
+for (const nodeId of readyNodes) {
+
+  console.log("Executing root node:", nodeId)
+
+  await new Promise((resolve) => setTimeout(resolve, 500))
+
+  results[nodeId] = {
+    status: "success",
+    output: "node executed"
+  }
+
+}
+
   return results
 }
