@@ -85,11 +85,14 @@ export async function executeWorkflow(nodes: Node[], edges: Edge[]) {
         // simulate execution
         await new Promise((resolve) => setTimeout(resolve, 500))
 
-        let outputData: any = "node executed"
+       let outputData: any = "node executed"
 
-        // Text Node logic
         if (node?.data?.nodeType === "textNode") {
-          outputData = node.data.text || ""
+        outputData = node.data.text || ""
+        }
+
+      if (node?.data?.nodeType === "imageUpload") {
+         outputData = node.data.image || null
         }
 
         results[nodeId] = {
