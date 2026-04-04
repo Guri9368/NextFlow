@@ -42,39 +42,64 @@ const nodeTypes = {
 let nodeCounter = 0
 const genId = () => `node_${++nodeCounter}_${Date.now()}`
 
-// Sample workflow definition
-const SAMPLE_WORKFLOW = {
+// Full Product Marketing Kit Generator sample workflow
+const SAMPLE_WORKFLOW: { nodes: Node[]; edges: Edge[] } = {
   nodes: [
+    // Branch A: Image processing
     {
-      id: "s_text1",
-      type: "textNode",
-      position: { x: 60, y: 80 },
-      data: { text: "You are a creative marketing expert. Write engaging product descriptions." },
-    },
-    {
-      id: "s_text2",
-      type: "textNode",
-      position: { x: 60, y: 260 },
-      data: { text: "Describe this product image and create a compelling marketing tweet under 280 characters." },
-    },
-    {
-      id: "s_image1",
+      id: "s_img1",
       type: "imageUpload",
-      position: { x: 60, y: 440 },
+      position: { x: 60, y: 60 },
       data: {},
     },
     {
+      id: "s_crop1",
+      type: "cropImage",
+      position: { x: 340, y: 60 },
+      data: { x: 0, y: 0, width: 80, height: 80 },
+    },
+    {
+      id: "s_sys_prompt",
+      type: "textNode",
+      position: { x: 60, y: 320 },
+      data: { text: "You are a creative marketing expert. Write engaging, viral product descriptions." },
+    },
+    {
+      id: "s_user_msg",
+      type: "textNode",
+      position: { x: 60, y: 500 },
+      data: { text: "Describe this product image and write a compelling marketing tweet under 280 characters. Make it exciting and use relevant emojis." },
+    },
+    // LLM Node 1 (Branch A convergence)
+    {
       id: "s_llm1",
       type: "llmNode",
-      position: { x: 400, y: 200 },
+      position: { x: 640, y: 200 },
       data: { model: "gemini-1.5-flash" },
     },
-  ] as Node[],
+    // Branch B: Video processing
+    {
+      id: "s_vid1",
+      type: "videoUpload",
+      position: { x: 60, y: 700 },
+      data: {},
+    },
+    {
+      id: "s_frame1",
+      type: "extractFrame",
+      position: { x: 340, y: 700 },
+      data: { timestamp: "50%" },
+    },
+  ],
   edges: [
-    { id: "e1", source: "s_text1", target: "s_llm1", targetHandle: "system_prompt", animated: true },
-    { id: "e2", source: "s_text2", target: "s_llm1", targetHandle: "user_message", animated: true },
-    { id: "e3", source: "s_image1", target: "s_llm1", targetHandle: "image", animated: true },
-  ] as Edge[],
+    // Branch A connections
+    { id: "e_img_crop", source: "s_img1", target: "s_crop1", sourceHandle: "image", targetHandle: "image", animated: true },
+    { id: "e_crop_llm", source: "s_crop1", target: "s_llm1", sourceHandle: "image", targetHandle: "image", animated: true },
+    { id: "e_sys_llm", source: "s_sys_prompt", target: "s_llm1", sourceHandle: "output", targetHandle: "system_prompt", animated: true },
+    { id: "e_usr_llm", source: "s_user_msg", target: "s_llm1", sourceHandle: "output", targetHandle: "user_message", animated: true },
+    // Branch B connections
+    { id: "e_vid_frame", source: "s_vid1", target: "s_frame1", sourceHandle: "video", targetHandle: "video", animated: true },
+  ],
 }
 
 function FlowCanvasInner() {
@@ -83,21 +108,15 @@ function FlowCanvasInner() {
   const { screenToFlowPosition } = useReactFlow()
   const importRef = useRef<HTMLInputElement>(null)
 
-  const {
-    setNodes: storeSetNodes,
-    setEdges: storeSetEdges,
-    setNodeStatus,
-    setNodeOutput,
-    addRun,
-    setCurrentRunId,
-  } = useWorkflowStore()
+  const { setNodes: storeSetNodes, setEdges: storeSetEdges, addRun, setCurrentRunId } =
+    useWorkflowStore()
 
   const [isRunning, setIsRunning] = React.useState(false)
-  const [toast, setToast] = React.useState<string | null>(null)
+  const [toast, setToast] = React.useState<{ msg: string; type: "ok" | "err" } | null>(null)
 
-  const showToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 2800)
+  const showToast = (msg: string, type: "ok" | "err" = "ok") => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
   }
 
   const onConnect = useCallback(
@@ -117,34 +136,21 @@ function FlowCanvasInner() {
       const type = event.dataTransfer.getData("application/reactflow")
       if (!type) return
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
-      const newNode: Node = {
-        id: genId(),
-        type,
-        position,
-        data: {},
-      }
+      const newNode: Node = { id: genId(), type, position, data: {} }
       setNodes((nds) => nds.concat(newNode))
     },
     [screenToFlowPosition, setNodes]
   )
 
-  // Keep store in sync with local state
-  React.useEffect(() => {
-    storeSetNodes(nodes)
-  }, [nodes])
-  React.useEffect(() => {
-    storeSetEdges(edges)
-  }, [edges])
+  React.useEffect(() => { storeSetNodes(nodes) }, [nodes])
+  React.useEffect(() => { storeSetEdges(edges) }, [edges])
 
   const runWorkflow = async () => {
-    if (nodes.length === 0) {
-      showToast("Add some nodes first")
-      return
-    }
+    if (nodes.length === 0) { showToast("Add some nodes first", "err"); return }
 
     setIsRunning(true)
 
-    // Reset node statuses
+    // Reset statuses
     setNodes((nds) =>
       nds.map((n) => ({ ...n, data: { ...n.data, status: "idle", output: undefined, error: undefined } }))
     )
@@ -170,16 +176,15 @@ function FlowCanvasInner() {
       addRun(run)
       setCurrentRunId(run.id)
 
-      const successCount = run.nodeResults.filter((r) => r.status === "success").length
-      const errorCount = run.nodeResults.filter((r) => r.status === "error").length
+      const ok = run.nodeResults.filter((r) => r.status === "success").length
+      const fail = run.nodeResults.filter((r) => r.status === "error").length
 
-      if (errorCount > 0) {
-        showToast(`Run complete — ${successCount} succeeded, ${errorCount} failed`)
-      } else {
-        showToast(`✓ Workflow complete — ${successCount} nodes ran successfully`)
-      }
+      showToast(
+        fail > 0 ? `${ok} succeeded · ${fail} failed` : `✓ All ${ok} nodes completed`,
+        fail > 0 ? "err" : "ok"
+      )
 
-      // Save run to DB
+      // Persist run
       try {
         await fetch("/api/workflow-runs", {
           method: "POST",
@@ -191,7 +196,7 @@ function FlowCanvasInner() {
         })
       } catch (_) {}
     } catch (err: any) {
-      showToast(`Error: ${err.message}`)
+      showToast(err.message, "err")
     } finally {
       setIsRunning(false)
     }
@@ -208,15 +213,19 @@ function FlowCanvasInner() {
           edges,
         }),
       })
-      if (res.ok) showToast("✓ Workflow saved")
-      else showToast("Failed to save workflow")
+      if (res.ok) showToast("✓ Workflow saved to database")
+      else {
+        const d = await res.json()
+        showToast(d.error || "Save failed", "err")
+      }
     } catch {
-      showToast("Failed to save workflow")
+      showToast("Failed to save", "err")
     }
   }
 
   const exportWorkflow = () => {
-    const data = JSON.stringify({ nodes, edges }, null, 2)
+    if (nodes.length === 0) { showToast("Nothing to export", "err"); return }
+    const data = JSON.stringify({ nodes, edges, exportedAt: new Date().toISOString() }, null, 2)
     const blob = new Blob([data], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -224,12 +233,10 @@ function FlowCanvasInner() {
     a.download = `nextflow_${Date.now()}.json`
     a.click()
     URL.revokeObjectURL(url)
-    showToast("✓ Workflow exported")
+    showToast("✓ Workflow exported as JSON")
   }
 
-  const importWorkflow = () => {
-    importRef.current?.click()
-  }
+  const importWorkflow = () => importRef.current?.click()
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -241,12 +248,12 @@ function FlowCanvasInner() {
         if (parsed.nodes && parsed.edges) {
           setNodes(parsed.nodes)
           setEdges(parsed.edges)
-          showToast("✓ Workflow imported")
+          showToast(`✓ Imported ${parsed.nodes.length} nodes`)
         } else {
-          showToast("Invalid workflow file")
+          showToast("Invalid workflow file — missing nodes/edges", "err")
         }
       } catch {
-        showToast("Failed to parse file")
+        showToast("Could not parse JSON file", "err")
       }
     }
     reader.readAsText(file)
@@ -256,7 +263,7 @@ function FlowCanvasInner() {
   const loadSample = () => {
     setNodes(SAMPLE_WORKFLOW.nodes)
     setEdges(SAMPLE_WORKFLOW.edges)
-    showToast("✓ Sample workflow loaded — upload an image and run!")
+    showToast("✓ Product Marketing Kit loaded — upload an image and run!")
   }
 
   return (
@@ -287,20 +294,12 @@ function FlowCanvasInner() {
             deleteKeyCode="Delete"
             style={{ background: "var(--bg-base)" }}
           >
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={20}
-              size={1.2}
-              color="#252530"
-            />
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color="#252530" />
             <Controls />
-            <MiniMap
-              style={{ bottom: 16, right: 16 }}
-              nodeColor={() => "var(--accent)"}
-            />
+            <MiniMap style={{ bottom: 16, right: 16 }} nodeColor={() => "var(--accent)"} />
           </ReactFlow>
 
-          {/* Empty state hint */}
+          {/* Empty state */}
           {nodes.length === 0 && (
             <div
               style={{
@@ -314,18 +313,12 @@ function FlowCanvasInner() {
                 gap: 10,
               }}
             >
-              <div style={{ fontSize: 28, opacity: 0.15 }}>⟨/⟩</div>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: "var(--text-muted)",
-                  textAlign: "center",
-                  lineHeight: 1.6,
-                }}
-              >
-                Drag nodes from the left sidebar
+              <div style={{ fontSize: 32, opacity: 0.1 }}>⟨/⟩</div>
+              <div style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center", lineHeight: 1.7 }}>
+                Drag nodes from the left panel onto the canvas
                 <br />
-                or click <strong style={{ color: "var(--text-secondary)" }}>Sample Workflow</strong> to get started
+                or click{" "}
+                <strong style={{ color: "var(--text-secondary)" }}>Sample Workflow</strong> to load an example
               </div>
             </div>
           )}
@@ -338,19 +331,20 @@ function FlowCanvasInner() {
                 bottom: 24,
                 left: "50%",
                 transform: "translateX(-50%)",
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--border-light)",
+                background: toast.type === "err" ? "rgba(239,68,68,0.1)" : "var(--bg-elevated)",
+                border: `1px solid ${toast.type === "err" ? "rgba(239,68,68,0.3)" : "var(--border-light)"}`,
                 borderRadius: 8,
                 padding: "9px 18px",
                 fontSize: 12,
                 fontWeight: 500,
-                color: "var(--text-primary)",
+                color: toast.type === "err" ? "var(--red)" : "var(--text-primary)",
                 boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
                 pointerEvents: "none",
                 whiteSpace: "nowrap",
+                zIndex: 1000,
               }}
             >
-              {toast}
+              {toast.msg}
             </div>
           )}
         </div>
@@ -358,7 +352,6 @@ function FlowCanvasInner() {
         <RightSidebar />
       </div>
 
-      {/* Hidden file import input */}
       <input
         ref={importRef}
         type="file"
