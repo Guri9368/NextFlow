@@ -8,18 +8,22 @@ datasource db {
 }
 
 model Workflow {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
+  userId    String
   name      String
   nodes     Json
   edges     Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  runs      WorkflowRun[]
 }
 
 model WorkflowRun {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   workflowId String
-  status     String   @default("running")
+  userId     String
+  status     String    @default("running")
   result     Json?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 }

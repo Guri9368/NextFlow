@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
@@ -10,13 +11,20 @@ const createSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const body = await req.json()
     const parsed = createSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 })
     }
+
     const workflow = await prisma.workflow.create({
       data: {
+        userId,
         name: parsed.data.name,
         nodes: parsed.data.nodes,
         edges: parsed.data.edges,
@@ -31,7 +39,13 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const workflows = await prisma.workflow.findMany({
+      where: { userId },
       orderBy: { createdAt: "desc" },
     })
     return NextResponse.json(workflows)
