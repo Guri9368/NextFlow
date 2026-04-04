@@ -1,22 +1,48 @@
 "use client"
 
-import { Handle, Position } from "reactflow"
+import { Handle, Position, NodeProps } from "reactflow"
+import { useState, useEffect } from "react"
+import { useWorkflowStore } from "@/store/workflowStore"
 
-export default function CropImageNode() {
+export default function CropImageNode({ id, data }: NodeProps) {
+  const [x, setX] = useState<number>(data.x ?? 0)
+  const [y, setY] = useState<number>(data.y ?? 0)
+  const [width, setWidth] = useState<number>(data.width ?? 50)
+  const [height, setHeight] = useState<number>(data.height ?? 50)
+  const updateNodeData = useWorkflowStore((s) => s.updateNodeData)
+  const status = data.status as string | undefined
+
+  useEffect(() => { updateNodeData(id, { x, y, width, height }) }, [x, y, width, height])
+
+  const numInput = (label: string, val: number, setter: (v: number) => void) => (
+    <div className="nf-field">
+      <div className="nf-label">{label} %</div>
+      <input type="number" min={0} max={100} value={val} onChange={(e) => setter(Number(e.target.value))} className="nf-input" style={{ padding: "5px 7px" }} />
+    </div>
+  )
+
   return (
-    <div className="bg-yellow-50 border rounded shadow p-3 w-48">
-
-      <div className="font-semibold text-sm mb-2">
-        Crop Image
+    <div className={`nf-node ${status === "running" ? "nf-node-running" : ""}`}>
+      <div className="nf-node-header">
+        <div className="nf-node-icon" style={{ background: "rgba(234,179,8,0.12)" }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2.5">
+            <path d="M6 2v4M2 6h4M18 2v4M20 6h4M6 22v-4M2 18h4M18 22v-4M20 18h4" />
+            <rect x="6" y="6" width="12" height="12" />
+          </svg>
+        </div>
+        <span className="nf-node-title">Crop Image</span>
+        {status === "success" && <span className="nf-status nf-status-success">✓</span>}
+        {status === "error" && <span className="nf-status nf-status-error">✗</span>}
+        {status === "running" && <span className="nf-status nf-status-running">●</span>}
       </div>
-
-      <p className="text-xs text-gray-500">
-        Crops incoming image
-      </p>
-
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
-
+      <div className="nf-node-body">
+        <div className="nf-row">{numInput("X", x, setX)}{numInput("Y", y, setY)}</div>
+        <div className="nf-row">{numInput("Width", width, setWidth)}{numInput("Height", height, setHeight)}</div>
+        {data.output && <img src={data.output} alt="cropped" style={{ width: "100%", height: 70, objectFit: "cover", borderRadius: 5, border: "1px solid var(--border)" }} />}
+        {data.error && <div className="nf-output" style={{ color: "var(--red)" }}>{data.error}</div>}
+      </div>
+      <Handle type="target" position={Position.Left} id="image" style={{ top: "40%" }} />
+      <Handle type="source" position={Position.Right} id="image" style={{ top: "40%" }} />
     </div>
   )
 }
