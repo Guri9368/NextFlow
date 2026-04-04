@@ -97,6 +97,27 @@ function FlowCanvasInner() {
   console.log("Workflow result:", results)
 }
 
+const saveWorkflow = async () => {
+
+  const payload = {
+    name: "My Workflow",
+    nodes: JSON.parse(JSON.stringify(nodes)),
+    edges: JSON.parse(JSON.stringify(edges))
+  }
+
+  const res = await fetch("/api/workflows", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  })
+
+  const data = await res.json()
+
+  console.log("Workflow saved:", data)
+}
+
 
   return (
   <div className="h-full relative">
@@ -107,6 +128,13 @@ function FlowCanvasInner() {
     >
       Run Workflow
     </button>
+
+    <button
+     onClick={saveWorkflow}
+     className="absolute top-4 right-36 z-10 px-3 py-1 bg-green-600 text-white rounded"
+     >
+      Save Workflow
+     </button>
 
     <ReactFlow
       nodes={nodes}

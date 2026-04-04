@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Workflow {
@@ -12,12 +13,13 @@ model Workflow {
   nodes     Json
   edges     Json
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model WorkflowRun {
   id         String   @id @default(cuid())
   workflowId String
-  status     String
+  status     String   @default("running")
   result     Json?
   createdAt  DateTime @default(now())
 }
