@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Workflow {
+  id        String   @id @default(cuid())
+  name      String
+  nodes     Json
+  edges     Json
+  createdAt DateTime @default(now())
+}
+
+model WorkflowRun {
+  id         String   @id @default(cuid())
+  workflowId String
+  status     String
+  result     Json?
+  createdAt  DateTime @default(now())
+}
