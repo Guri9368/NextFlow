@@ -1,15 +1,21 @@
 "use client"
 
-import { Handle, Position, NodeProps } from "reactflow"
-import { useState, useEffect } from "react"
-import { useWorkflowStore } from "@/store/workflowStore"
+import { Handle, Position, NodeProps, useReactFlow } from "reactflow"
+import { useState } from "react"
 
 export default function TextNode({ id, data }: NodeProps) {
   const [text, setText] = useState<string>(data.text || "")
-  const updateNodeData = useWorkflowStore((s) => s.updateNodeData)
+  const { setNodes } = useReactFlow()
   const status = data.status as string | undefined
 
-  useEffect(() => { updateNodeData(id, { text }) }, [text])
+  const handleChange = (val: string) => {
+    setText(val)
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, text: val } } : n
+      )
+    )
+  }
 
   return (
     <div className={`nf-node ${status === "running" ? "nf-node-running" : ""}`}>
@@ -33,7 +39,7 @@ export default function TextNode({ id, data }: NodeProps) {
             rows={3}
             placeholder="Enter text content..."
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             style={{ minHeight: 64, resize: "vertical" }}
           />
         </div>

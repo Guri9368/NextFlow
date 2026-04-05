@@ -1,23 +1,45 @@
 "use client"
 
-import { Handle, Position, NodeProps } from "reactflow"
-import { useState, useEffect } from "react"
-import { useWorkflowStore } from "@/store/workflowStore"
+import { Handle, Position, NodeProps, useReactFlow } from "reactflow"
+import { useState } from "react"
 
 export default function CropImageNode({ id, data }: NodeProps) {
   const [x, setX] = useState<number>(data.x ?? 0)
   const [y, setY] = useState<number>(data.y ?? 0)
   const [width, setWidth] = useState<number>(data.width ?? 50)
   const [height, setHeight] = useState<number>(data.height ?? 50)
-  const updateNodeData = useWorkflowStore((s) => s.updateNodeData)
+  const { setNodes } = useReactFlow()
   const status = data.status as string | undefined
 
-  useEffect(() => { updateNodeData(id, { x, y, width, height }) }, [x, y, width, height])
+  const updateField = (key: string, val: number) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, [key]: val } } : n
+      )
+    )
+  }
 
-  const numInput = (label: string, val: number, setter: (v: number) => void) => (
+  const numInput = (
+    label: string,
+    val: number,
+    key: string,
+    setter: (v: number) => void
+  ) => (
     <div className="nf-field">
       <div className="nf-label">{label} %</div>
-      <input type="number" min={0} max={100} value={val} onChange={(e) => setter(Number(e.target.value))} className="nf-input" style={{ padding: "5px 7px" }} />
+      <input
+        type="number"
+        min={0}
+        max={100}
+        value={val}
+        onChange={(e) => {
+          const v = Number(e.target.value)
+          setter(v)
+          updateField(key, v)
+        }}
+        className="nf-input"
+        style={{ padding: "5px 7px" }}
+      />
     </div>
   )
 
@@ -36,10 +58,33 @@ export default function CropImageNode({ id, data }: NodeProps) {
         {status === "running" && <span className="nf-status nf-status-running">●</span>}
       </div>
       <div className="nf-node-body">
-        <div className="nf-row">{numInput("X", x, setX)}{numInput("Y", y, setY)}</div>
-        <div className="nf-row">{numInput("Width", width, setWidth)}{numInput("Height", height, setHeight)}</div>
-        {data.output && <img src={data.output} alt="cropped" style={{ width: "100%", height: 70, objectFit: "cover", borderRadius: 5, border: "1px solid var(--border)" }} />}
-        {data.error && <div className="nf-output" style={{ color: "var(--red)" }}>{data.error}</div>}
+        <div className="nf-row">
+          {numInput("X", x, "x", setX)}
+          {numInput("Y", y, "y", setY)}
+        </div>
+        <div className="nf-row">
+          {numInput("Width", width, "width", setWidth)}
+          {numInput("Height", height, "height", setHeight)}
+        </div>
+        {data.output && (
+          <div>
+            <div className="nf-label">Output</div>
+            <img
+              src={data.output}
+              alt="cropped"
+              style={{
+                width: "100%", height: 70,
+                objectFit: "cover", borderRadius: 5,
+                border: "1px solid var(--border)",
+              }}
+            />
+          </div>
+        )}
+        {data.error && (
+          <div className="nf-output" style={{ color: "var(--red)" }}>
+            {data.error}
+          </div>
+        )}
       </div>
       <Handle type="target" position={Position.Left} id="image" style={{ top: "40%" }} />
       <Handle type="source" position={Position.Right} id="image" style={{ top: "40%" }} />

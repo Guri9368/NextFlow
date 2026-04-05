@@ -1,20 +1,27 @@
 "use client"
 
-import { Handle, Position, NodeProps } from "reactflow"
+import { Handle, Position, NodeProps, useReactFlow } from "reactflow"
 import { useState } from "react"
-import { useWorkflowStore } from "@/store/workflowStore"
 
 export default function VideoUploadNode({ id, data }: NodeProps) {
   const [preview, setPreview] = useState<string>(data.videoUrl || "")
-  const updateNodeData = useWorkflowStore((s) => s.updateNodeData)
+  const { setNodes } = useReactFlow()
   const status = data.status as string | undefined
+
+  const updateData = (updates: Record<string, any>) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, ...updates } } : n
+      )
+    )
+  }
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const url = URL.createObjectURL(file)
     setPreview(url)
-    updateNodeData(id, { videoUrl: url, video: url })
+    updateData({ videoUrl: url, video: url })
   }
 
   return (
@@ -28,22 +35,48 @@ export default function VideoUploadNode({ id, data }: NodeProps) {
         </div>
         <span className="nf-node-title">Upload Video</span>
         {status === "success" && <span className="nf-status nf-status-success">✓</span>}
+        {status === "error" && <span className="nf-status nf-status-error">✗</span>}
+        {status === "running" && <span className="nf-status nf-status-running">●</span>}
       </div>
       <div className="nf-node-body">
         {!preview ? (
           <label className="nf-upload-area" style={{ display: "block" }}>
-            <input type="file" accept=".mp4,.mov,.webm,.m4v" onChange={handleFile} style={{ display: "none" }} />
+            <input
+              type="file"
+              accept=".mp4,.mov,.webm,.m4v"
+              onChange={handleFile}
+              style={{ display: "none" }}
+            />
             <div style={{ marginBottom: 4, fontSize: 16 }}>🎬</div>
             <div>Click to upload video</div>
-            <div style={{ marginTop: 3, color: "var(--text-muted)", fontSize: 10 }}>MP4 · MOV · WEBM · M4V</div>
+            <div style={{ marginTop: 3, color: "var(--text-muted)", fontSize: 10 }}>
+              MP4 · MOV · WEBM · M4V
+            </div>
           </label>
         ) : (
           <div style={{ position: "relative" }}>
-            <video src={preview} controls style={{ width: "100%", height: 90, borderRadius: 6, border: "1px solid var(--border)", background: "#000" }} />
+            <video
+              src={preview}
+              controls
+              style={{
+                width: "100%", height: 90, borderRadius: 6,
+                border: "1px solid var(--border)", background: "#000",
+              }}
+            />
             <button
-              onClick={() => { setPreview(""); updateNodeData(id, { videoUrl: "", video: "" }) }}
-              style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.7)", border: "none", color: "white", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}
-            >×</button>
+              onClick={() => {
+                setPreview("")
+                updateData({ videoUrl: "", video: "" })
+              }}
+              style={{
+                position: "absolute", top: 4, right: 4,
+                background: "rgba(0,0,0,0.7)", border: "none",
+                color: "white", borderRadius: 4,
+                padding: "2px 6px", fontSize: 10, cursor: "pointer",
+              }}
+            >
+              ×
+            </button>
           </div>
         )}
       </div>

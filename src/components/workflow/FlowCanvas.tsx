@@ -30,6 +30,7 @@ import Topbar from "@/components/layout/Topbar"
 import LeftSidebar from "@/components/layout/LeftSidebar"
 import RightSidebar from "@/components/layout/RightSidebar"
 
+// Must be defined outside component - React Flow requirement
 const nodeTypes = {
   textNode: TextNode,
   llmNode: LLMNode,
@@ -42,10 +43,8 @@ const nodeTypes = {
 let nodeCounter = 0
 const genId = () => `node_${++nodeCounter}_${Date.now()}`
 
-// Full Product Marketing Kit Generator sample workflow
 const SAMPLE_WORKFLOW: { nodes: Node[]; edges: Edge[] } = {
   nodes: [
-    // Branch A: Image processing
     {
       id: "s_img1",
       type: "imageUpload",
@@ -70,14 +69,12 @@ const SAMPLE_WORKFLOW: { nodes: Node[]; edges: Edge[] } = {
       position: { x: 60, y: 500 },
       data: { text: "Describe this product image and write a compelling marketing tweet under 280 characters. Make it exciting and use relevant emojis." },
     },
-    // LLM Node 1 (Branch A convergence)
     {
       id: "s_llm1",
       type: "llmNode",
-      position: { x: 640, y: 200 },
+      position: { x: 680, y: 200 },
       data: { model: "gemini-1.5-flash" },
     },
-    // Branch B: Video processing
     {
       id: "s_vid1",
       type: "videoUpload",
@@ -92,12 +89,10 @@ const SAMPLE_WORKFLOW: { nodes: Node[]; edges: Edge[] } = {
     },
   ],
   edges: [
-    // Branch A connections
     { id: "e_img_crop", source: "s_img1", target: "s_crop1", sourceHandle: "image", targetHandle: "image", animated: true },
     { id: "e_crop_llm", source: "s_crop1", target: "s_llm1", sourceHandle: "image", targetHandle: "image", animated: true },
     { id: "e_sys_llm", source: "s_sys_prompt", target: "s_llm1", sourceHandle: "output", targetHandle: "system_prompt", animated: true },
     { id: "e_usr_llm", source: "s_user_msg", target: "s_llm1", sourceHandle: "output", targetHandle: "user_message", animated: true },
-    // Branch B connections
     { id: "e_vid_frame", source: "s_vid1", target: "s_frame1", sourceHandle: "video", targetHandle: "video", animated: true },
   ],
 }
@@ -105,18 +100,17 @@ const SAMPLE_WORKFLOW: { nodes: Node[]; edges: Edge[] } = {
 function FlowCanvasInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, getNodes } = useReactFlow()
   const importRef = useRef<HTMLInputElement>(null)
 
-  const { setNodes: storeSetNodes, setEdges: storeSetEdges, addRun, setCurrentRunId } =
-    useWorkflowStore()
+  const { addRun, setCurrentRunId } = useWorkflowStore()
 
   const [isRunning, setIsRunning] = React.useState(false)
   const [toast, setToast] = React.useState<{ msg: string; type: "ok" | "err" } | null>(null)
 
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
     setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), 3200)
   }
 
   const onConnect = useCallback(
@@ -142,24 +136,35 @@ function FlowCanvasInner() {
     [screenToFlowPosition, setNodes]
   )
 
-  React.useEffect(() => { storeSetNodes(nodes) }, [nodes])
-  React.useEffect(() => { storeSetEdges(edges) }, [edges])
-
   const runWorkflow = async () => {
-    if (nodes.length === 0) { showToast("Add some nodes first", "err"); return }
+    if (nodes.length === 0) {
+      showToast("Add some nodes first", "err")
+      return
+    }
 
     setIsRunning(true)
 
-    // Reset statuses
+    // Reset all node statuses
     setNodes((nds) =>
-      nds.map((n) => ({ ...n, data: { ...n.data, status: "idle", output: undefined, error: undefined } }))
+      nds.map((n) => ({
+        ...n,
+        data: { ...n.data, status: "idle", output: undefined, error: undefined },
+      }))
     )
 
     try {
-      const run = await executeWorkflow(nodes, edges, {
+      // Use getNodes() to get the absolute latest node state including all data
+      // (uploaded files, typed text, etc.) at the moment Run is clicked
+      const latestNodes = getNodes()
+
+      const run = await executeWorkflow(latestNodes, edges, {
         onNodeStart: (nodeId) => {
           setNodes((nds) =>
-            nds.map((n) => n.id === nodeId ? { ...n, data: { ...n.data, status: "running" } } : n)
+            nds.map((n) =>
+              n.id === nodeId
+                ? { ...n, data: { ...n.data, status: "running" } }
+                : n
+            )
           )
         },
         onNodeDone: (nodeId, output, error) => {
@@ -184,7 +189,6 @@ function FlowCanvasInner() {
         fail > 0 ? "err" : "ok"
       )
 
-      // Persist run
       try {
         await fetch("/api/workflow-runs", {
           method: "POST",
@@ -208,32 +212,36 @@ function FlowCanvasInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: `Workflow ${new Date().toLocaleString()}`,
-          nodes,
+          name: `Workflow — ${new Date().toLocaleString()}`,
+          nodes: getNodes(),
           edges,
         }),
       })
-      if (res.ok) showToast("✓ Workflow saved to database")
+      if (res.ok) showToast("✓ Workflow saved")
       else {
         const d = await res.json()
         showToast(d.error || "Save failed", "err")
       }
     } catch {
-      showToast("Failed to save", "err")
+      showToast("Could not reach server", "err")
     }
   }
 
   const exportWorkflow = () => {
     if (nodes.length === 0) { showToast("Nothing to export", "err"); return }
-    const data = JSON.stringify({ nodes, edges, exportedAt: new Date().toISOString() }, null, 2)
-    const blob = new Blob([data], { type: "application/json" })
+    const payload = JSON.stringify(
+      { nodes: getNodes(), edges, exportedAt: new Date().toISOString() },
+      null,
+      2
+    )
+    const blob = new Blob([payload], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
     a.download = `nextflow_${Date.now()}.json`
     a.click()
     URL.revokeObjectURL(url)
-    showToast("✓ Workflow exported as JSON")
+    showToast("✓ Exported as JSON")
   }
 
   const importWorkflow = () => importRef.current?.click()
@@ -250,7 +258,7 @@ function FlowCanvasInner() {
           setEdges(parsed.edges)
           showToast(`✓ Imported ${parsed.nodes.length} nodes`)
         } else {
-          showToast("Invalid workflow file — missing nodes/edges", "err")
+          showToast("Invalid file — missing nodes/edges", "err")
         }
       } catch {
         showToast("Could not parse JSON file", "err")
@@ -263,7 +271,7 @@ function FlowCanvasInner() {
   const loadSample = () => {
     setNodes(SAMPLE_WORKFLOW.nodes)
     setEdges(SAMPLE_WORKFLOW.edges)
-    showToast("✓ Product Marketing Kit loaded — upload an image and run!")
+    showToast("✓ Sample loaded — upload an image & video then run!")
   }
 
   return (
@@ -299,18 +307,13 @@ function FlowCanvasInner() {
             <MiniMap style={{ bottom: 16, right: 16 }} nodeColor={() => "var(--accent)"} />
           </ReactFlow>
 
-          {/* Empty state */}
           {nodes.length === 0 && (
             <div
               style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                pointerEvents: "none",
-                gap: 10,
+                position: "absolute", inset: 0,
+                display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center",
+                pointerEvents: "none", gap: 10,
               }}
             >
               <div style={{ fontSize: 32, opacity: 0.1 }}>⟨/⟩</div>
@@ -318,30 +321,24 @@ function FlowCanvasInner() {
                 Drag nodes from the left panel onto the canvas
                 <br />
                 or click{" "}
-                <strong style={{ color: "var(--text-secondary)" }}>Sample Workflow</strong> to load an example
+                <strong style={{ color: "var(--text-secondary)" }}>Sample Workflow</strong>{" "}
+                to load an example
               </div>
             </div>
           )}
 
-          {/* Toast */}
           {toast && (
             <div
               style={{
-                position: "absolute",
-                bottom: 24,
-                left: "50%",
+                position: "absolute", bottom: 24, left: "50%",
                 transform: "translateX(-50%)",
-                background: toast.type === "err" ? "rgba(239,68,68,0.1)" : "var(--bg-elevated)",
-                border: `1px solid ${toast.type === "err" ? "rgba(239,68,68,0.3)" : "var(--border-light)"}`,
-                borderRadius: 8,
-                padding: "9px 18px",
-                fontSize: 12,
-                fontWeight: 500,
+                background: toast.type === "err" ? "rgba(239,68,68,0.08)" : "var(--bg-elevated)",
+                border: `1px solid ${toast.type === "err" ? "rgba(239,68,68,0.25)" : "var(--border-light)"}`,
+                borderRadius: 8, padding: "9px 20px",
+                fontSize: 12, fontWeight: 500,
                 color: toast.type === "err" ? "var(--red)" : "var(--text-primary)",
                 boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-                pointerEvents: "none",
-                whiteSpace: "nowrap",
-                zIndex: 1000,
+                pointerEvents: "none", whiteSpace: "nowrap", zIndex: 1000,
               }}
             >
               {toast.msg}

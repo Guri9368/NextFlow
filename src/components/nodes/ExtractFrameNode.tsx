@@ -1,15 +1,21 @@
 "use client"
 
-import { Handle, Position, NodeProps } from "reactflow"
-import { useState, useEffect } from "react"
-import { useWorkflowStore } from "@/store/workflowStore"
+import { Handle, Position, NodeProps, useReactFlow } from "reactflow"
+import { useState } from "react"
 
 export default function ExtractFrameNode({ id, data }: NodeProps) {
   const [timestamp, setTimestamp] = useState<string>(data.timestamp || "50%")
-  const updateNodeData = useWorkflowStore((s) => s.updateNodeData)
+  const { setNodes } = useReactFlow()
   const status = data.status as string | undefined
 
-  useEffect(() => { updateNodeData(id, { timestamp }) }, [timestamp])
+  const handleChange = (val: string) => {
+    setTimestamp(val)
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, timestamp: val } } : n
+      )
+    )
+  }
 
   return (
     <div className={`nf-node ${status === "running" ? "nf-node-running" : ""}`}>
@@ -27,11 +33,36 @@ export default function ExtractFrameNode({ id, data }: NodeProps) {
       <div className="nf-node-body">
         <div className="nf-field">
           <div className="nf-label">Timestamp</div>
-          <input type="text" className="nf-input" placeholder="50% or 12.5 (seconds)" value={timestamp} onChange={(e) => setTimestamp(e.target.value)} />
-          <div style={{ fontSize: 9.5, color: "var(--text-muted)", marginTop: 2 }}>Use % for relative, or seconds</div>
+          <input
+            type="text"
+            className="nf-input"
+            placeholder="50% or 12.5 (seconds)"
+            value={timestamp}
+            onChange={(e) => handleChange(e.target.value)}
+          />
+          <div style={{ fontSize: 9.5, color: "var(--text-muted)", marginTop: 2 }}>
+            Use % for relative, or seconds (e.g. 12.5)
+          </div>
         </div>
-        {data.output && <img src={data.output} alt="frame" style={{ width: "100%", height: 70, objectFit: "cover", borderRadius: 5, border: "1px solid var(--border)" }} />}
-        {data.error && <div className="nf-output" style={{ color: "var(--red)" }}>{data.error}</div>}
+        {data.output && (
+          <div>
+            <div className="nf-label">Extracted Frame</div>
+            <img
+              src={data.output}
+              alt="frame"
+              style={{
+                width: "100%", height: 70,
+                objectFit: "cover", borderRadius: 5,
+                border: "1px solid var(--border)",
+              }}
+            />
+          </div>
+        )}
+        {data.error && (
+          <div className="nf-output" style={{ color: "var(--red)" }}>
+            {data.error}
+          </div>
+        )}
       </div>
       <Handle type="target" position={Position.Left} id="video" style={{ top: "40%" }} />
       <Handle type="source" position={Position.Right} id="image" style={{ top: "40%" }} />
