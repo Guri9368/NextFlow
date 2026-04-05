@@ -15,7 +15,10 @@ Build, connect, and execute AI workflows with a drag-and-drop canvas — powered
 [![Prisma](https://img.shields.io/badge/Prisma-6.7-2d3748?style=flat-square&logo=prisma)](https://prisma.io)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-008bb9?style=flat-square&logo=postgresql)](https://neon.tech)
  
-[Live Demo](https://next-flow-gamma-one.vercel.app/) · [Report Bug](issues) · [Request Feature](issues)
+[Live Demo](https://next-flow-gamma-one.vercel.app/) 
+
+
+
  
 </div>
  
