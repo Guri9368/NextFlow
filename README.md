@@ -501,14 +501,13 @@ model WorkflowRun {
  
 ---
  
-## License
- 
-MIT License — see [LICENSE](LICENSE) for details.
+##Owner
+Gurmeet Singh Rathor
  
 ---
  
 <div align="center">
  
-Built with ❤️ using Next.js, React Flow, and Gemini AI
+Built with ❤️ using Next.js, React Flow, and Gemini AI API
  
 </div>
